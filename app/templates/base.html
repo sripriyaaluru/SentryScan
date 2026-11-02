@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}SentryScan{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="/" class="brand">🛡️ SentryScan</a>
+    <span class="tagline">Automated Network Pentesting &amp; Vulnerability Assessment</span>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer">
+    Authorized lab use only &middot; Nothing outside <code>AUTHORIZED_TARGETS</code> will ever be scanned.
+  </footer>
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

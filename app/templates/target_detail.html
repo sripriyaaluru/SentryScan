@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}{{ target.name }} - SentryScan{% endblock %}
+{% block content %}
+  <a href="/">&larr; Back to dashboard</a>
+  <div class="panel">
+    <div class="panel-header">
+      <h1>{{ target.name }} <span class="muted">({{ target.host }})</span></h1>
+      {% if authorized %}<span class="badge badge-ok">Authorized</span>
+      {% else %}<span class="badge badge-warn">Not on AUTHORIZED_TARGETS allow-list</span>{% endif %}
+    </div>
+    <p>{{ target.description or "" }}</p>
+
+    <div class="actions" data-target-id="{{ target.id }}">
+      <button class="btn-secondary" onclick="runRecon({{ target.id }})">Run Recon</button>
+      <button class="btn-secondary" onclick="runVulnAssessment()">Assess Vulnerabilities</button>
+      <button class="btn-secondary" onclick="computeRisk()">Compute Risk</button>
+      <button class="btn-secondary" onclick="generateReport('html')">Generate HTML Report</button>
+      <button class="btn-secondary" onclick="generateReport('pdf')">Generate PDF Report</button>
+    </div>
+    <p id="action-status" class="empty"></p>
+  </div>
+
+  <div class="panel">
+    <h2>Scan Jobs</h2>
+    {% if jobs %}
+    <table>
+      <thead><tr><th>ID</th><th>Type</th><th>Status</th><th>Created</th><th>Error</th></tr></thead>
+      <tbody>
+        {% for j in jobs %}
+        <tr>
+          <td>{{ j.id }}</td><td>{{ j.job_type.value }}</td><td>{{ j.status.value }}</td>
+          <td>{{ j.created_at.strftime("%Y-%m-%d %H:%M") }}</td><td>{{ j.error_message or "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="empty">No scan jobs yet.</p>{% endif %}
+  </div>
+
+  <div class="panel">
+    <h2>Hosts &amp; Ports</h2>
+    {% if hosts %}
+    {% for h in hosts %}
+      <h3>{{ h.ip_address }} {% if h.hostname %}({{ h.hostname }}){% endif %} &mdash; {{ h.os_guess or "OS unknown" }}</h3>
+      <table>
+        <thead><tr><th>Port</th><th>Proto</th><th>State</th><th>Service</th><th>Product</th><th>Version</th></tr></thead>
+        <tbody>
+          {% for p in h.ports %}
+          <tr><td>{{ p.port_number }}</td><td>{{ p.protocol }}</td><td>{{ p.state }}</td><td>{{ p.service_name or "-" }}</td><td>{{ p.service_product or "-" }}</td><td>{{ p.service_version or "-" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endfor %}
+    {% else %}<p class="empty">No hosts discovered yet -- run Recon first.</p>{% endif %}
+  </div>
+
+  <div class="panel">
+    <h2>Vulnerabilities</h2>
+    {% if vulnerabilities %}
+    <table>
+      <thead><tr><th>Severity</th><th>CVE</th><th>Title</th><th>CVSS</th><th>Source</th></tr></thead>
+      <tbody>
+        {% for v in vulnerabilities|sort(attribute="cvss_score", reverse=True) %}
+        <tr>
+          <td><span class="sev-badge sev-{{ v.severity.value }}">{{ v.severity.value }}</span></td>
+          <td>{{ v.cve_id or "-" }}</td><td>{{ v.title }}</td>
+          <td>{{ "%.1f"|format(v.cvss_score) if v.cvss_score is not none else "N/A" }}</td>
+          <td>{{ v.source }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="empty">No vulnerabilities found yet.</p>{% endif %}
+  </div>
+
+  <div class="panel">
+    <h2>Credential Findings</h2>
+    {% if credential_findings %}
+    <table>
+      <thead><tr><th>Service</th><th>Port</th><th>Username</th><th>Password</th></tr></thead>
+      <tbody>
+        {% for c in credential_findings %}
+        <tr><td>{{ c.service }}</td><td>{{ c.port }}</td><td>{{ c.username }}</td><td>{{ c.password }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="empty">No weak credentials found (or auth testing not run).</p>{% endif %}
+  </div>
+
+  <div class="panel">
+    <h2>Risk Scores</h2>
+    {% if risk_scores %}
+    <table>
+      <thead><tr><th>Severity</th><th>Score</th><th>Rationale</th><th>Computed</th></tr></thead>
+      <tbody>
+        {% for r in risk_scores %}
+        <tr>
+          <td><span class="sev-badge sev-{{ r.severity_level.value }}">{{ r.severity_level.value }}</span></td>
+          <td>{{ "%.1f"|format(r.overall_score) }}/10</td><td>{{ r.rationale }}</td>
+          <td>{{ r.computed_at.strftime("%Y-%m-%d %H:%M") }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="empty">Risk has not been computed yet.</p>{% endif %}
+  </div>
+
+  <div class="panel">
+    <h2>Reports</h2>
+    {% if reports %}
+    <ul>
+      {% for r in reports %}
+      <li><a href="/api/reports/{{ r.id }}/download">Report #{{ r.id }} ({{ r.format|upper }}) &mdash; {{ r.generated_at.strftime("%Y-%m-%d %H:%M") }}</a></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="empty">No reports generated yet.</p>{% endif %}
+  </div>
+
+  <script>
+    window.latestJobId = {{ (jobs[0].id if jobs else "null") }};
+  </script>
+{% endblock %}

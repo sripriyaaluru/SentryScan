@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - SentryScan{% endblock %}
+{% block content %}
+  <div class="panel">
+    <div class="panel-header">
+      <h1>Targets</h1>
+      <button class="btn-primary" onclick="document.getElementById('new-target-form').classList.toggle('hidden')">+ Add Target</button>
+    </div>
+
+    <form id="new-target-form" class="hidden inline-form" onsubmit="createTarget(event)">
+      <input type="text" id="t-name" placeholder="Name (e.g. Lab VM 1)" required>
+      <input type="text" id="t-host" placeholder="Host / IP (e.g. 192.168.56.10)" required>
+      <input type="text" id="t-desc" placeholder="Description (optional)">
+      <button type="submit" class="btn-primary">Create</button>
+    </form>
+
+    {% if target_rows %}
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Host</th><th>Authorized?</th><th>Latest Scan</th><th>Risk</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for row in target_rows %}
+        <tr>
+          <td><a href="/targets/{{ row.target.id }}/view">{{ row.target.name }}</a></td>
+          <td>{{ row.target.host }}</td>
+          <td>
+            {% if row.authorized %}<span class="badge badge-ok">Authorized</span>
+            {% else %}<span class="badge badge-warn">Not on allow-list</span>{% endif %}
+          </td>
+          <td>
+            {% if row.latest_job %}{{ row.latest_job.job_type.value }} &middot; {{ row.latest_job.status.value }}
+            {% else %}<span class="empty">No scans yet</span>{% endif %}
+          </td>
+          <td>
+            {% if row.latest_risk %}
+            <span class="sev-badge sev-{{ row.latest_risk.severity_level.value }}">{{ row.latest_risk.severity_level.value }}</span>
+            {{ "%.1f"|format(row.latest_risk.overall_score) }}/10
+            {% else %}<span class="empty">N/A</span>{% endif %}
+          </td>
+          <td><a href="/targets/{{ row.target.id }}/view">Details &rarr;</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No targets yet. Add one above to get started.</p>
+    {% endif %}
+  </div>
+
+  <div class="panel info-panel">
+    <h2>How this works</h2>
+    <ol>
+      <li>Add a <strong>Target</strong> (must resolve inside <code>AUTHORIZED_TARGETS</code> to ever be scanned).</li>
+      <li>Run <strong>Recon</strong> (Nmap) to discover hosts/ports/services.</li>
+      <li>Run <strong>Vulnerability Assessment</strong> to match services against the CVE dataset.</li>
+      <li>Optionally run <strong>Authentication Testing</strong> with your own lab-only credential lists.</li>
+      <li>Compute <strong>Risk</strong> and generate a <strong>Report</strong> (HTML/PDF).</li>
+    </ol>
+    <p class="empty">All actions are also available via the REST API under <code>/api</code> (see <a href="/docs">/docs</a>).</p>
+  </div>
+{% endblock %}
